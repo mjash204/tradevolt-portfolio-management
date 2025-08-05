@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Broker CRM</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --dark-bg: #1f2937;
+            --dark-card: #374151;
+            --light-bg: #f9fafb;
+            --light-card: #ffffff;
+            --text-dark: #111827;
+            --text-light: #f9fafb;
+            --border-light: #e5e7eb;
+            --border-dark: #4b5563;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light-bg);
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        body.dark {
+            background: var(--dark-bg);
+            color: var(--text-light);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--light-card);
+            border-right: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        body.dark .sidebar {
+            background: var(--dark-card);
+            border-right-color: var(--border-dark);
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        body.dark .sidebar-header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .collapse-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background 0.2s;
+        }
+
+        .collapse-btn:hover {
+            background: var(--border-light);
+        }
+
+        body.dark .collapse-btn:hover {
+            background: var(--border-dark);
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            margin: 0.25rem 0;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: var(--border-light);
+        }
+
+        body.dark .nav-link:hover {
+            background: var(--border-dark);
+        }
+
+        .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 60px;
+        }
+
+        .header {
+            background: var(--light-card);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        body.dark .header {
+            background: var(--dark-card);
+            border-bottom-color: var(--border-dark);
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--light-card);
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body.dark .card {
+            background: var(--dark-card);
+            border-color: var(--border-dark);
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-light);
+            border-radius: 0.375rem;
+            background: var(--light-card);
+            color: var(--text-dark);
+        }
+
+        body.dark .form-input {
+            border-color: var(--border-dark);
+            background: var(--dark-card);
+            color: var(--text-light);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        body.dark .table th,
+        body.dark .table td {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .table th {
+            background: var(--border-light);
+            font-weight: 600;
+        }
+
+        body.dark .table th {
+            background: var(--border-dark);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            z-index: 9999;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: var(--success-color);
+        }
+
+        .toast.error {
+            background: var(--danger-color);
+        }
+
+        .toast.warning {
+            background: var(--warning-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--light-card);
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        body.dark .stat-card {
+            background: var(--dark-card);
+            border-color: var(--border-dark);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .market-ticker {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 0.5rem;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: scroll 45s linear infinite;
+            padding-left: 100%;
+        }
+
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 1rem 0;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .login-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: var(--light-card);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        body.dark .modal-content {
+            background-color: var(--dark-card);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        body.dark .close:hover {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .file-upload {
+            border: 2px dashed var(--border-light);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary-color);
+        }
+
+        .file-upload.dragover {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .search-box {
+            margin-bottom: 1rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .page-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-light);
+            background: var(--light-card);
+            cursor: pointer;
+            border-radius: 0.25rem;
+        }
+
+        body.dark .page-btn {
+            border-color: var(--border-dark);
+            background: var(--dark-card);
+        }
+
+        .page-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .profit { color: var(--success-color); }
+        .loss { color: var(--danger-color); }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary-color);">Stock Broker CRM</h2>
+            <div id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Username/Email</label>
+                    <input type="text" id="loginUsername" class="form-input" placeholder="Enter username or email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="Enter password">
+                </div>
+                <button onclick="login()" class="btn" style="width: 100%; margin-bottom: 1rem;">Login</button>
+                <p style="text-align: center;">
+                    Don't have an account? 
+                    <a href="#" onclick="showRegister()" style="color: var(--primary-color);">Register</a>
+                </p>
+            </div>
+            <div id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="regName" class="form-input" placeholder="Enter full name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="regUsername" class="form-input" placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="regEmail" class="form-input" placeholder="Enter email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="regPassword" class="form-input" placeholder="Enter password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select id="regRole" class="form-input">
+                        <option value="client">Client</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button onclick="register()" class="btn" style="width: 100%; margin-bottom: 1rem;">Register</button>
+                <p style="text-align: center;">
+                    Already have an account? 
+                    <a href="#" onclick="showLogin()" style="color: var(--primary-color);">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="container" style="display: none;">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo" id="logoText">CRM</div>
+                <button class="collapse-btn" onclick="toggleSidebar()">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="showPage('dashboard')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                        </svg>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('transactions')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z"/>
+                        </svg>
+                        <span class="nav-text">Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('portfolio')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"/>
+                        </svg>
+                        <span class="nav-text">Portfolio</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('profits')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M16 6L18.29 8.29L13.41 13.17L9.41 9.17L2 16.59L3.41 18L9.41 12L13.41 16L19.71 9.71L22 12V6H16Z"/>
+                        </svg>
+                        <span class="nav-text">Daily Profits</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('reports')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        <span class="nav-text">Reports</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('import')">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20ZM12 19L8 15H10.5V12H13.5V15H16L12 19Z"/>
+                        </svg>
+                        <span class="nav-text">Import</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="logout()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"/>
+                        </svg>
+                        <span class="nav-text">Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <span id="welcomeMessage">Welcome, User!</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </header>
+
+            <!-- Market Ticker -->
+            <div class="market-ticker">
+                <div class="ticker-content" id="marketTicker">
+                    Loading market data...
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Dashboard Page -->
+                <div id="dashboardPage" class="page active">
+                    <div style="margin-bottom: 2rem;">
+                        <button onclick="refreshData()" class="btn">Refresh</button>
+                        <button onclick="exportToExcel()" class="btn btn-success">Export Excel</button>
+                        <button onclick="exportToPDF()" class="btn btn-danger">Export PDF</button>
+                        <button onclick="printReport()" class="btn btn-secondary">Print</button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalInvestment">₹0</div>
+                            <div class="stat-label">Total Investment</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="currentValue">₹0</div>
+                            <div class="stat-label">Current Value</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalPL">₹0</div>
+                            <div class="stat-label">Total P&L</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalReturn">0%</div>
+                            <div class="stat-label">Total Return</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Holdings Summary</h3>
+                        <div class="search-box">
+                            <input type="text" id="holdingsSearch" placeholder="Search holdings..." class="form-input" onkeyup="filterHoldings()">
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="table" id="holdingsTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('holdingsTable', 0)">Account Name</th>
+                                        <th onclick="sortTable('holdingsTable', 1)">Total Investment</th>
+                                        <th onclick="sortTable('holdingsTable', 2)">Current Value</th>
+                                        <th onclick="sortTable('holdingsTable', 3)">Profit/Loss</th>
+                                        <th onclick="sortTable('holdingsTable', 4)">Return %</th>
+                                        <th onclick="sortTable('holdingsTable', 5)">Held in Demat</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div class="card">
+                            <h3>Portfolio Distribution</h3>
+                            <div class="chart-container">
+                                <canvas id="portfolioChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Performance Over Time</h3>
+                            <div class="chart-container">
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Page -->
+                <div id="transactionsPage" class="page">
+                    <div class="card">
+                        <h3>Add Transaction</h3>
+                        <form id="transactionForm" onsubmit="addTransaction(event)">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">Date</label>
+                                    <input type="date" id="transactionDate" class="form-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Account Name</label>
+                                    <select id="accountName" class="form-input" required>
+                                        <option value="">Select Account</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Transaction Type</label>
+                                    <select id="transactionType" class="form-input" required>
+                                        <option value="">Select Type</option>
+                                        <option value="Purchase">Purchase</option>
+                                        <option value="Sale">Sale</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Share Name</label>
+                                    <input type="text" id="shareName" class="form-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" id="quantity" class="form-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Price per Share</label>
+                                    <input type="number" id="pricePerShare" class="form-input" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">STT/Brokerage</label>
+                                    <input type="number" id="sttCharges" class="form-input" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Total Amount</label>
+                                    <input type="number" id="totalAmount" class="form-input" step="0.01" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">ISIN Number</label>
+                                    <input type="text" id="isinNumber" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Narration</label>
+                                    <input type="text" id="narration" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Held in Demat</label>
+                                    <select id="heldInDemat" class="form-input">
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <button type="submit" class="btn">Save Transaction</button>
+                                <button type="button" onclick="clearTransactionForm()" class="btn btn-secondary">Clear</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Recent Transactions</h3>
+                        <div class="search-box">
+                            <input type="text" id="transactionSearch" placeholder="Search transactions..." class="form-input" onkeyup="filterTransactions()">
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="table" id="transactionsTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('transactionsTable', 0)">Date</th>
+                                        <th onclick="sortTable('transactionsTable', 1)">Account</th>
+                                        <th onclick="sortTable('transactionsTable', 2)">Share</th>
+                                        <th onclick="sortTable('transactionsTable', 3)">Type</th>
+                                        <th onclick="sortTable('transactionsTable', 4)">Qty</th>
+                                        <th onclick="sortTable('transactionsTable', 5)">Amount</th>
+                                        <th onclick="sortTable('transactionsTable', 6)">STT</th>
+                                        <th onclick="sortTable('transactionsTable', 7)">Total</th>
+                                        <th onclick="sortTable('transactionsTable', 8)">Narration</th>
+                                        <th onclick="sortTable('transactionsTable', 9)">Demat</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="transactionPagination"></div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Page -->
+                <div id="portfolioPage" class="page">
+                    <div class="card">
+                        <div style="margin-bottom: 1rem;">
+                            <button onclick="exportPortfolioToExcel()" class="btn btn-success">Export to Excel</button>
+                            <button onclick="refreshPortfolio()" class="btn">Refresh Prices</button>
+                        </div>
+                        <h3>Current Portfolio</h3>
+                        <div class="search-box">
+                            <input type="text" id="portfolioSearch" placeholder="Search portfolio..." class="form-input" onkeyup="filterPortfolio()">
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="table" id="portfolioTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('portfolioTable', 0)">Share Name</th>
+                                        <th onclick="sortTable('portfolioTable', 1)">Quantity</th>
+                                        <th onclick="sortTable('portfolioTable', 2)">Purchase Rate</th>
+                                        <th onclick="sortTable('portfolioTable', 3)">Current Rate</th>
+                                        <th onclick="sortTable('portfolioTable', 4)">Investment</th>
+                                        <th onclick="sortTable('portfolioTable', 5)">Current Value</th>
+                                        <th onclick="sortTable('portfolioTable', 6)">P&L</th>
+                                        <th onclick="sortTable('portfolioTable', 7)">Return %</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Profits Page -->
+                <div id="profitsPage" class="page">
+                    <div class="card">
+                        <h3>Daily Profits Filter</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Time Period</label>
+                                <select id="profitTimePeriod" class="form-input" onchange="filterProfits()">
+                                    <option value="all">All Time</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">From Date</label>
+                                <input type="date" id="profitFromDate" class="form-input" onchange="filterProfits()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">To Date</label>
+                                <input type="date" id="profitToDate" class="form-input" onchange="filterProfits()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Daily Profits</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="table" id="profitsTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('profitsTable', 0)">Date</th>
+                                        <th onclick="sortTable('profitsTable', 1)">Share</th>
+                                        <th onclick="sortTable('profitsTable', 2)">Profit/Loss</th>
+                                        <th onclick="sortTable('profitsTable', 3)">Return %</th>
+                                        <th onclick="sortTable('profitsTable', 4)">Held in Demat</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reportsPage" class="page">
+                    <div class="card">
+                        <h3>Generate Report</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Report Type</label>
+                                <select id="reportType" class="form-input">
+                                    <option value="current">Current Format</option>
+                                    <option value="fifo">FIFO Method</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Account Name</label>
+                                <select id="reportAccount" class="form-input">
+                                    <option value="">All Accounts</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Transaction Type</label>
+                                <select id="reportTransactionType" class="form-input">
+                                    <option value="">All</option>
+                                    <option value="Purchase">Purchase</option>
+                                    <option value="Sale">Sale</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">From Date</label>
+                                <input type="date" id="reportFromDate" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">To Date</label>
+                                <input type="date" id="reportToDate" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Held in Demat</label>
+                                <select id="reportDemat" class="form-input">
+                                    <option value="">All</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button onclick="generateReport()" class="btn">Generate Report</button>
+                            <button onclick="downloadReport()" class="btn btn-success">Download Report</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Report Results</h3>
+                        <div id="reportResults">
+                            <p>Click "Generate Report" to view results</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Import Page -->
+                <div id="importPage" class="page">
+                    <div class="card">
+                        <h3>Import from Excel</h3>
+                        <p>Required Excel columns: A/C NAME, Date of Purchase, Name, Quantity, Purchase Rate, Purchase Amount, Date Of Sale, No. of Shares Sold, Sale Rate, Sold Amount (Rs.), ISIN No., Narration, Held in Demat</p>
+                        
+                        <div class="file-upload" id="fileUpload" onclick="document.getElementById('fileInput').click()">
+                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleFileSelect(event)">
+                            <div>
+                                <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; display: block; color: #6b7280;" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                <p>Click to browse or drag and drop Excel file here</p>
+                            </div>
+                        </div>
+
+                        <div id="filePreview" style="display: none; margin-top: 2rem;">
+                            <h4>File Preview</h4>
+                            <div style="overflow-x: auto;">
+                                <table class="table" id="previewTable">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="confirmUpload()" class="btn btn-success">Confirm Upload</button>
+                                <button onclick="cancelUpload()" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 2rem;">
+                            <button onclick="downloadSampleTemplate()" class="btn btn-warning">Download Sample Template</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Transaction Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h3>Edit Transaction</h3>
+            <form id="editTransactionForm" onsubmit="updateTransaction(event)">
+                <input type="hidden" id="editTransactionId">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="editTransactionDate" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Account Name</label>
+                        <select id="editAccountName" class="form-input" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Transaction Type</label>
+                        <select id="editTransactionType" class="form-input" required>
+                            <option value="Purchase">Purchase</option>
+                            <option value="Sale">Sale</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Share Name</label>
+                        <input type="text" id="editShareName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" id="editQuantity" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Price per Share</label>
+                        <input type="number" id="editPricePerShare" class="form-input" step="0.01" required>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn">Update Transaction</button>
+                    <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global Variables
+        let currentUser = null;
+        let transactions = [];
+        let users = [];
+        let currentPage = 'dashboard';
+        let portfolioData = [];
+        let charts = {};
+        let sidebarCollapsed = false;
+        let darkMode = false;
+        let inactivityTimer = null;
+        
+        const accountNames = [
+            "AHC-RHM", "AHC-HCM", "AHC-BHM", "AHC-AHGJPL", "AHC-MRM", 
+            "HCM-HCM", "BHM-BHM", "RHM-RHM", "RACH-RACH", "MRM-MRM", 
+            "PDJ-PDJ", "OTHER-RACH", "KS-RACH", "LS-RACH", "SIP-RACH", 
+            "PPCHF-RACH", "50-50-RACH", "OTHER-BHM", "KS-BHM", "LS-BHM", 
+            "SIP-BHM", "PPCHF-BHM"
+        ];
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStoredData();
+            initializeApp();
+            setupEventListeners();
+            setupInactivityTimer();
+        });
+
+        function loadStoredData() {
+            const storedUsers = localStorage.getItem('crmUsers');
+            const storedTransactions = localStorage.getItem('crmTransactions');
+            const storedDarkMode = localStorage.getItem('crmDarkMode');
+            const storedCurrentUser = localStorage.getItem('crmCurrentUser');
+
+            if (storedUsers) {
+                users = JSON.parse(storedUsers);
+            }
+            if (storedTransactions) {
+                transactions = JSON.parse(storedTransactions);
+            }
+            if (storedDarkMode === 'true') {
+                darkMode = true;
+                document.body.classList.add('dark');
+                document.getElementById('darkModeToggle').checked = true;
+            }
+            if (storedCurrentUser) {
+                currentUser = JSON.parse(storedCurrentUser);
+                showMainApp();
+            }
+        }
+
+        function initializeApp() {
+            populateAccountDropdowns();
+            setupFileUploadHandlers();
+            
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('transactionDate').value = today;
+            
+            if (currentUser) {
+                updateWelcomeMessage();
+                loadDashboardData();
+                startMarketTicker();
+            }
+        }
+
+        function setupEventListeners() {
+            // Calculate total amount when quantity or price changes
+            const qtyInput = document.getElementById('quantity');
+            const priceInput = document.getElementById('pricePerShare');
+            const sttInput = document.getElementById('sttCharges');
+            
+            [qtyInput, priceInput, sttInput].forEach(input => {
+                input.addEventListener('input', calculateTotalAmount);
+            });
+
+            // File upload drag and drop
+            const fileUpload = document.getElementById('fileUpload');
+            fileUpload.addEventListener('dragover', handleDragOver);
+            fileUpload.addEventListener('drop', handleFileDrop);
+            fileUpload.addEventListener('dragleave', handleDragLeave);
+        }
+
+        function setupInactivityTimer() {
+            const resetTimer = () => {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(() => {
+                    if (currentUser) {
+                        showToast('Session expired due to inactivity', 'warning');
+                        logout();
+                    }
+                }, 30 * 60 * 1000); // 30 minutes
+            };
+
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+                document.addEventListener(event, resetTimer, true);
+            });
+        }
+
+        // Authentication Functions
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+
+        function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            const user = users.find(u => 
+                (u.username === username || u.email === username) && u.password === password
+            );
+
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('crmCurrentUser', JSON.stringify(currentUser));
+                showMainApp();
+                showToast(`Welcome back, ${user.name}!`, 'success');
+            } else {
+                showToast('Invalid credentials', 'error');
+            }
+        }
+
+        function register() {
+            const name = document.getElementById('regName').value;
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const role = document.getElementById('regRole').value;
+
+            if (!name || !username || !email || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (users.some(u => u.username === username || u.email === email)) {
+                showToast('Username or email already exists', 'error');
+                return;
+            }
+
+            const newUser = {
+                id: Date.now(),
+                name,
+                username,
+                email,
+                password,
+                role,
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('crmUsers', JSON.stringify(users));
+            
+            showToast('Registration successful! Please login.', 'success');
+            showLogin();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('crmCurrentUser');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            
+            // Clear forms
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            showLogin();
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            updateWelcomeMessage();
+            loadDashboardData();
+            startMarketTicker();
+        }
+
+        function updateWelcomeMessage() {
+            document.getElementById('welcomeMessage').textContent = `Welcome, ${currentUser.name}!`;
+        }
+
+        // Navigation Functions
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId + 'Page').classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.closest('.nav-link').classList.add('active');
+            
+            // Update page title
+            const titles = {
+                dashboard: 'Dashboard',
+                transactions: 'Transactions',
+                portfolio: 'Portfolio',
+                profits: 'Daily Profits',
+                reports: 'Reports',
+                import: 'Import Data'
+            };
+            
+            document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';
+            currentPage = pageId;
+            
+            // Load page-specific data
+            if (pageId === 'dashboard') {
+                loadDashboardData();
+            } else if (pageId === 'transactions') {
+                loadTransactions();
+            } else if (pageId === 'portfolio') {
+                loadPortfolio();
+            } else if (pageId === 'profits') {
+                loadProfits();
+            } else if (pageId === 'reports') {
+                loadReports();
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const logoText = document.getElementById('logoText');
+            const navTexts = document.querySelectorAll('.nav-text');
+            
+            sidebarCollapsed = !sidebarCollapsed;
+            
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+                logoText.textContent = 'C';
+                navTexts.forEach(text => text.style.display = 'none');
+            } else {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('expanded');
+                logoText.textContent = 'CRM';
+                navTexts.forEach(text => text.style.display = 'inline');
+            }
+        }
+
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark');
+            localStorage.setItem('crmDarkMode', darkMode);
+            
+            // Refresh charts with new theme
+            if (charts.portfolio) {
+                charts.portfolio.destroy();
+            }
+            if (charts.performance) {
+                charts.performance.destroy();
+            }
+            
+            setTimeout(() => {
+                if (currentPage === 'dashboard') {
+                    loadDashboardData();
+                }
+            }, 100);
+        }
+
+        // Utility Functions
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        function formatPercentage(value) {
+            return (value || 0).toFixed(2) + '%';
+        }
+
+        function generateId() {
+            return Date.now() + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Transaction Functions
+        function populateAccountDropdowns() {
+            const dropdowns = ['accountName', 'editAccountName', 'reportAccount'];
+            
+            dropdowns.forEach(id => {
+                const dropdown = document.getElementById(id);
+                if (dropdown) {
+                    // Clear existing options (except first one for some dropdowns)
+                    if (id === 'reportAccount') {
+                        dropdown.innerHTML = '<option value="">All Accounts</option>';
+                    } else {
+                        dropdown.innerHTML = '<option value="">Select Account</option>';
+                    }
+                    
+                    accountNames.forEach(account => {
+                        const option = document.createElement('option');
+                        option.value = account;
+                        option.textContent = account;
+                        dropdown.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        function calculateTotalAmount() {
+            const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+            const price = parseFloat(document.getElementById('pricePerShare').value) || 0;
+            const stt = parseFloat(document.getElementById('sttCharges').value) || 0;
+            
+            const total = (quantity * price) + stt;
+            document.getElementById('totalAmount').value = total.toFixed(2);
+        }
+
+        function addTransaction(event) {
+            event.preventDefault();
+            
+            const formData = {
+                id: generateId(),
+                date: document.getElementById('transactionDate').value,
+                account: document.getElementById('accountName').value,
+                shareName: document.getElementById('shareName').value,
+                type: document.getElementById('transactionType').value,
+                quantity: parseFloat(document.getElementById('quantity').value),
+                pricePerShare: parseFloat(document.getElementById('pricePerShare').value),
+                sttCharges: parseFloat(document.getElementById('sttCharges').value) || 0,
+                totalAmount: parseFloat(document.getElementById('totalAmount').value),
+                isinNumber: document.getElementById('isinNumber').value,
+                narration: document.getElementById('narration').value,
+                heldInDemat: document.getElementById('heldInDemat').value,
+                userId: currentUser.id,
+                createdAt: new Date().toISOString()
+            };
+            
+            transactions.push(formData);
+            localStorage.setItem('crmTransactions', JSON.stringify(transactions));
+            
+            showToast('Transaction added successfully', 'success');
+            clearTransactionForm();
+            loadTransactions();
+            
+            // Update dashboard if it's the current page
+            if (currentPage === 'dashboard') {
+                loadDashboardData();
+            }
+        }
+
+        function clearTransactionForm() {
+            document.getElementById('transactionForm').reset();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('transactionDate').value = today;
+        }
+
+        function loadTransactions() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.id);
+            const tbody = document.querySelector('#transactionsTable tbody');
+            tbody.innerHTML = '';
+            
+            userTransactions.reverse().forEach(transaction => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(transaction.date).toLocaleDateString()}</td>
+                    <td>${transaction.account}</td>
+                    <td>${transaction.shareName}</td>
+                    <td>${transaction.type}</td>
+                    <td>${transaction.quantity}</td>
+                    <td>${formatCurrency(transaction.pricePerShare)}</td>
+                    <td>${formatCurrency(transaction.sttCharges)}</td>
+                    <td>${formatCurrency(transaction.totalAmount)}</td>
+                    <td>${transaction.narration || '-'}</td>
+                    <td>${transaction.heldInDemat}</td>
+                    <td>
+                        <button onclick="editTransaction('${transaction.id}')" class="btn btn-warning" style="padding: 0.25rem 0.5rem; margin-right: 0.25rem;">Edit</button>
+                        <button onclick="deleteTransaction('${transaction.id}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem;">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function editTransaction(id) {
+            const transaction = transactions.find(t => t.id === id);
+            if (!transaction) return;
+            
+            document.getElementById('editTransactionId').value = transaction.id;
+            document.getElementById('editTransactionDate').value = transaction.date;
+            document.getElementById('editAccountName').value = transaction.account;
+            document.getElementById('editTransactionType').value = transaction.type;
+            document.getElementById('editShareName').value = transaction.shareName;
+            document.getElementById('editQuantity').value = transaction.quantity;
+            document.getElementById('editPricePerShare').value = transaction.pricePerShare;
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function updateTransaction(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('editTransactionId').value;
+            const transactionIndex = transactions.findIndex(t => t.id === id);
+            
+            if (transactionIndex !== -1) {
+                transactions[transactionIndex] = {
+                    ...transactions[transactionIndex],
+                    date: document.getElementById('editTransactionDate').value,
+                    account: document.getElementById('editAccountName').value,
+                    type: document.getElementById('editTransactionType').value,
+                    shareName: document.getElementById('editShareName').value,
+                    quantity: parseFloat(document.getElementById('editQuantity').value),
+                    pricePerShare: parseFloat(document.getElementById('editPricePerShare').value),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                localStorage.setItem('crmTransactions', JSON.stringify(transactions));
+                showToast('Transaction updated successfully', 'success');
+                closeEditModal();
+                loadTransactions();
+                
+                if (currentPage === 'dashboard') {
+                    loadDashboardData();
+                }
+            }
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Are you sure you want to delete this transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                localStorage.setItem('crmTransactions', JSON.stringify(transactions));
+                showToast('Transaction deleted successfully', 'success');
+                loadTransactions();
+                
+                if (currentPage === 'dashboard') {
+                    loadDashboardData();
+                }
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Dashboard Functions
+        function loadDashboardData() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.id);
+            calculatePortfolioStats(userTransactions);
+            loadHoldingsSummary(userTransactions);
+            createCharts(userTransactions);
+        }
+
+        function calculatePortfolioStats(userTransactions) {
+            let totalInvestment = 0;
+            let currentValue = 0;
+            
+            const holdings = {};
+            
+            userTransactions.forEach(transaction => {
+                const key = `${transaction.shareName}_${transaction.account}`;
+                
+                if (!holdings[key]) {
+                    holdings[key] = {
+                        shareName: transaction.shareName,
+                        account: transaction.account,
+                        totalQuantity: 0,
+                        totalInvestment: 0,
+                        averagePrice: 0,
+                        heldInDemat: transaction.heldInDemat
+                    };
+                }
+                
+                if (transaction.type === 'Purchase') {
+                    holdings[key].totalQuantity += transaction.quantity;
+                    holdings[key].totalInvestment += transaction.totalAmount;
+                } else if (transaction.type === 'Sale') {
+                    holdings[key].totalQuantity -= transaction.quantity;
+                    holdings[key].totalInvestment -= (transaction.pricePerShare * transaction.quantity);
+                }
+                
+                if (holdings[key].totalQuantity > 0) {
+                    holdings[key].averagePrice = holdings[key].totalInvestment / holdings[key].totalQuantity;
+                }
+            });
+            
+            // Calculate totals and current values (using mock prices for demo)
+            Object.values(holdings).forEach(holding => {
+                if (holding.totalQuantity > 0) {
+                    totalInvestment += holding.totalInvestment;
+                    // Mock current price - in real app, fetch from API
+                    const currentPrice = holding.averagePrice * (0.95 + Math.random() * 0.1);
+                    const holdingCurrentValue = holding.totalQuantity * currentPrice;
+                    currentValue += holdingCurrentValue;
+                }
+            });
+            
+            const totalPL = currentValue - totalInvestment;
+            const totalReturn = totalInvestment > 0 ? (totalPL / totalInvestment) * 100 : 0;
+            
+            // Update dashboard stats
+            document.getElementById('totalInvestment').textContent = formatCurrency(totalInvestment);
+            document.getElementById('currentValue').textContent = formatCurrency(currentValue);
+            document.getElementById('totalPL').textContent = formatCurrency(totalPL);
+            document.getElementById('totalPL').className = `stat-value ${totalPL >= 0 ? 'profit' : 'loss'}`;
+            document.getElementById('totalReturn').textContent = formatPercentage(totalReturn);
+        }
+
+        function loadHoldingsSummary(userTransactions) {
+            const accountSummary = {};
+            
+            userTransactions.forEach(transaction => {
+                if (!accountSummary[transaction.account]) {
+                    accountSummary[transaction.account] = {
+                        totalInvestment: 0,
+                        currentValue: 0,
+                        heldInDemat: transaction.heldInDemat
+                    };
+                }
+                
+                if (transaction.type === 'Purchase') {
+                    accountSummary[transaction.account].totalInvestment += transaction.totalAmount;
+                } else if (transaction.type === 'Sale') {
+                    accountSummary[transaction.account].totalInvestment -= transaction.totalAmount;
+                }
+            });
+            
+            const tbody = document.querySelector('#holdingsTable tbody');
+            tbody.innerHTML = '';
+            
+            Object.entries(accountSummary).forEach(([account, data]) => {
+                const currentValue = data.totalInvestment * (0.95 + Math.random() * 0.1);
+                const pl = currentValue - data.totalInvestment;
+                const returnPct = data.totalInvestment > 0 ? (pl / data.totalInvestment) * 100 : 0;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${account}</td>
+                    <td>${formatCurrency(data.totalInvestment)}</td>
+                    <td>${formatCurrency(currentValue)}</td>
+                    <td class="${pl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pl)}</td>
+                    <td class="${returnPct >= 0 ? 'profit' : 'loss'}">${formatPercentage(returnPct)}</td>
+                    <td>${data.heldInDemat}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function createCharts(userTransactions) {
+            createPortfolioChart(userTransactions);
+            createPerformanceChart(userTransactions);
+        }
+
+        function createPortfolioChart(userTransactions) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            const accountData = {};
+            userTransactions.forEach(transaction => {
+                if (!accountData[transaction.account]) {
+                    accountData[transaction.account] = 0;
+                }
+                if (transaction.type === 'Purchase') {
+                    accountData[transaction.account] += transaction.totalAmount;
+                }
+            });
+            
+            if (charts.portfolio) {
+                charts.portfolio.destroy();
+            }
+            
+            charts.portfolio = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(accountData),
+                    datasets: [{
+                        data: Object.values(accountData),
+                        backgroundColor: [
+                            '#2563eb', '#059669', '#dc2626', '#d97706', '#7c3aed',
+                            '#06b6d4', '#84cc16', '#f59e0b', '#ef4444', '#8b5cf6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPerformanceChart(userTransactions) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Group transactions by month
+            const monthlyData = {};
+            userTransactions.forEach(transaction => {
+                const month = new Date(transaction.date).toISOString().slice(0, 7);
+                if (!monthlyData[month]) {
+                    monthlyData[month] = { investment: 0, value: 0 };
+                }
+                if (transaction.type === 'Purchase') {
+                    monthlyData[month].investment += transaction.totalAmount;
+                }
+            });
+            
+            const sortedMonths = Object.keys(monthlyData).sort();
+            let cumulativeInvestment = 0;
+            
+            const labels = [];
+            const investmentData = [];
+            const valueData = [];
+            
+            sortedMonths.forEach(month => {
+                cumulativeInvestment += monthlyData[month].investment;
+                const currentValue = cumulativeInvestment * (0.95 + Math.random() * 0.1);
+                
+                labels.push(new Date(month).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+                investmentData.push(cumulativeInvestment);
+                valueData.push(currentValue);
+            });
+            
+            if (charts.performance) {
+                charts.performance.destroy();
+            }
+            
+            charts.performance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Investment',
+                        data: investmentData,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: false
+                    }, {
+                        label: 'Current Value',
+                        data: valueData,
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Portfolio Functions
+        function loadPortfolio() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.id);
+            const holdings = {};
+            
+            userTransactions.forEach(transaction => {
+                const key = transaction.shareName;
+                
+                if (!holdings[key]) {
+                    holdings[key] = {
+                        shareName: transaction.shareName,
+                        totalQuantity: 0,
+                        totalInvestment: 0,
+                        averagePrice: 0
+                    };
+                }
+                
+                if (transaction.type === 'Purchase') {
+                    holdings[key].totalQuantity += transaction.quantity;
+                    holdings[key].totalInvestment += transaction.totalAmount;
+                } else if (transaction.type === 'Sale') {
+                    holdings[key].totalQuantity -= transaction.quantity;
+                    holdings[key].totalInvestment -= (transaction.pricePerShare * transaction.quantity);
+                }
+                
+                if (holdings[key].totalQuantity > 0) {
+                    holdings[key].averagePrice = holdings[key].totalInvestment / holdings[key].totalQuantity;
+                }
+            });
+            
+            const tbody = document.querySelector('#portfolioTable tbody');
+            tbody.innerHTML = '';
+            
+            Object.values(holdings).forEach(holding => {
+                if (holding.totalQuantity > 0) {
+                    const currentPrice = holding.averagePrice * (0.95 + Math.random() * 0.1);
+                    const currentValue = holding.totalQuantity * currentPrice;
+                    const pl = currentValue - holding.totalInvestment;
+                    const returnPct = (pl / holding.totalInvestment) * 100;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${holding.shareName}</td>
+                        <td>${holding.totalQuantity}</td>
+                        <td>${formatCurrency(holding.averagePrice)}</td>
+                        <td>${formatCurrency(currentPrice)}</td>
+                        <td>${formatCurrency(holding.totalInvestment)}</td>
+                        <td>${formatCurrency(currentValue)}</td>
+                        <td class="${pl >= 0 ? 'profit' : 'loss'}">${formatCurrency(pl)}</td>
+                        <td class="${returnPct >= 0 ? 'profit' : 'loss'}">${formatPercentage(returnPct)}</td>
+                        <td>
+                            <button onclick="sellShare('${holding.shareName}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem;">Sell</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+        }
+
+        function refreshPortfolio() {
+            showToast('Portfolio refreshed', 'success');
+            loadPortfolio();
+        }
+
+        function exportPortfolioToExcel() {
+            const table = document.getElementById('portfolioTable');
+            const wb = XLSX.utils.table_to_book(table);
+            XLSX.writeFile(wb, `portfolio_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Portfolio exported to Excel', 'success');
+        }
+
+        // Profits Functions
+        function loadProfits() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.id);
+            const profitData = [];
+            
+            userTransactions.forEach(transaction => {
+                if (transaction.type === 'Sale') {
+                    // Find corresponding purchase to calculate profit
+                    const purchases = userTransactions.filter(t => 
+                        t.shareName === transaction.shareName && 
+                        t.type === 'Purchase' && 
+                        new Date(t.date) <= new Date(transaction.date)
+                    );
+                    
+                    if (purchases.length > 0) {
+                        const avgPurchasePrice = purchases.reduce((sum, p) => sum + p.pricePerShare, 0) / purchases.length;
+                        const profit = (transaction.pricePerShare - avgPurchasePrice) * transaction.quantity;
+                        const returnPct = ((transaction.pricePerShare - avgPurchasePrice) / avgPurchasePrice) * 100;
+                        
+                        profitData.push({
+                            date: transaction.date,
+                            shareName: transaction.shareName,
+                            profit: profit,
+                            returnPct: returnPct,
+                            heldInDemat: transaction.heldInDemat
+                        });
+                    }
+                }
+            });
+            
+            const tbody = document.querySelector('#profitsTable tbody');
+            tbody.innerHTML = '';
+            
+            profitData.reverse().forEach(data => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(data.date).toLocaleDateString()}</td>
+                    <td>${data.shareName}</td>
+                    <td class="${data.profit >= 0 ? 'profit' : 'loss'}">${formatCurrency(data.profit)}</td>
+                    <td class="${data.returnPct >= 0 ? 'profit' : 'loss'}">${formatPercentage(data.returnPct)}</td>
+                    <td>${data.heldInDemat}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterProfits() {
+            // Implementation for profit filtering
+            loadProfits();
+        }
+
+        // Reports Functions
+        function loadReports() {
+            populateAccountDropdowns();
+        }
+
+        function generateReport() {
+            const reportType = document.getElementById('reportType').value;
+            const account = document.getElementById('reportAccount').value;
+            const transactionType = document.getElementById('reportTransactionType').value;
+            const fromDate = document.getElementById('reportFromDate').value;
+            const toDate = document.getElementById('reportToDate').value;
+            const demat = document.getElementById('reportDemat').value;
+            
+            let filteredTransactions = transactions.filter(t => t.userId === currentUser.id);
+            
+            if (account) {
+                filteredTransactions = filteredTransactions.filter(t => t.account === account);
+            }
+            if (transactionType) {
+                filteredTransactions = filteredTransactions.filter(t => t.type === transactionType);
+            }
+            if (fromDate) {
+                filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= new Date(fromDate));
+            }
+            if (toDate) {
+                filteredTransactions = filteredTransactions.filter(t => new Date(t.date) <= new Date(toDate));
+            }
+            if (demat) {
+                filteredTransactions = filteredTransactions.filter(t => t.heldInDemat === demat);
+            }
+            
+            displayReport(filteredTransactions, reportType);
+        }
+
+        function displayReport(transactions, reportType) {
+            const resultsDiv = document.getElementById('reportResults');
+            
+            if (transactions.length === 0) {
+                resultsDiv.innerHTML = '<p>No transactions found for the selected criteria.</p>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account</th>
+                            <th>Share</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Amount</th>
+                            <th>Demat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            transactions.forEach(transaction => {
+                tableHTML += `
+                    <tr>
+                        <td>${new Date(transaction.date).toLocaleDateString()}</td>
+                        <td>${transaction.account}</td>
+                        <td>${transaction.shareName}</td>
+                        <td>${transaction.type}</td>
+                        <td>${transaction.quantity}</td>
+                        <td>${formatCurrency(transaction.pricePerShare)}</td>
+                        <td>${formatCurrency(transaction.totalAmount)}</td>
+                        <td>${transaction.heldInDemat}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            resultsDiv.innerHTML = tableHTML;
+        }
+
+        function downloadReport() {
+            const reportResults = document.getElementById('reportResults');
+            const table = reportResults.querySelector('table');
+            
+            if (table) {
+                const wb = XLSX.utils.table_to_book(table);
+                XLSX.writeFile(wb, `report_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showToast('Report downloaded', 'success');
+            } else {
+                showToast('No report to download', 'error');
+            }
+        }
+
+        // Import Functions
+        function setupFileUploadHandlers() {
+            const fileUpload = document.getElementById('fileUpload');
+            const fileInput = document.getElementById('fileInput');
+            
+            fileUpload.addEventListener('dragover', handleDragOver);
+            fileUpload.addEventListener('drop', handleFileDrop);
+            fileUpload.addEventListener('dragleave', handleDragLeave);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                displayFilePreview(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayFilePreview(data) {
+            const previewDiv = document.getElementById('filePreview');
+            const table = document.getElementById('previewTable');
+            
+            if (data.length === 0) {
+                showToast('No data found in file', 'error');
+                return;
+            }
+            
+            // Create table headers
+            const headers = Object.keys(data[0]);
+            let headerHTML = '<tr>';
+            headers.forEach(header => {
+                headerHTML += `<th>${header}</th>`;
+            });
+            headerHTML += '</tr>';
+            table.querySelector('thead').innerHTML = headerHTML;
+            
+            // Create table rows (show first 5 rows for preview)
+            let bodyHTML = '';
+            data.slice(0, 5).forEach(row => {
+                bodyHTML += '<tr>';
+                headers.forEach(header => {
+                    bodyHTML += `<td>${row[header] || ''}</td>`;
+                });
+                bodyHTML += '</tr>';
+            });
+            table.querySelector('tbody').innerHTML = bodyHTML;
+            
+            previewDiv.style.display = 'block';
+            window.uploadData = data; // Store for confirmation
+        }
+
+        function confirmUpload() {
+            if (!window.uploadData) {
+                showToast('No data to upload', 'error');
+                return;
+            }
+            
+            let importedCount = 0;
+            
+            window.uploadData.forEach(row => {
+                // Map Excel columns to our transaction format
+                const transaction = {
+                    id: generateId(),
+                    date: row['Date of Purchase'] || new Date().toISOString().split('T')[0],
+                    account: row['A/C NAME'] || '',
+                    shareName: row['Name'] || '',
+                    type: 'Purchase',
+                    quantity: parseFloat(row['Quantity']) || 0,
+                    pricePerShare: parseFloat(row['Purchase Rate']) || 0,
+                    sttCharges: 0,
+                    totalAmount: parseFloat(row['Purchase Amount']) || 0,
+                    isinNumber: row['ISIN No.'] || '',
+                    narration: row['Narration'] || '',
+                    heldInDemat: row['Held in Demat'] || 'Yes',
+                    userId: currentUser.id,
+                    createdAt: new Date().toISOString()
+                };
+                
+                // Add sale transaction if exists
+                if (row['Date Of Sale'] && row['No. of Shares Sold']) {
+                    const saleTransaction = {
+                        ...transaction,
+                        id: generateId(),
+                        date: row['Date Of Sale'],
+                        type: 'Sale',
+                        quantity: parseFloat(row['No. of Shares Sold']),
+                        pricePerShare: parseFloat(row['Sale Rate']) || 0,
+                        totalAmount: parseFloat(row['Sold Amount (Rs.)']) || 0
+                    };
+                    transactions.push(saleTransaction);
+                    importedCount++;
+                }
+                
+                transactions.push(transaction);
+                importedCount++;
+            });
+            
+            localStorage.setItem('crmTransactions', JSON.stringify(transactions));
+            showToast(`Successfully imported ${importedCount} transactions`, 'success');
+            cancelUpload();
+            
+            if (currentPage === 'transactions') {
+                loadTransactions();
+            }
+        }
+
+        function cancelUpload() {
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            window.uploadData = null;
+        }
+
+        function downloadSampleTemplate() {
+            const sampleData = [{
+                'A/C NAME': 'AHC-RHM',
+                'Date of Purchase': '2024-01-15',
+                'Name': 'RELIANCE',
+                'Quantity': 10,
+                'Purchase Rate': 2500,
+                'Purchase Amount': 25000,
+                'Date Of Sale': '',
+                'No. of Shares Sold': '',
+                'Sale Rate': '',
+                'Sold Amount (Rs.)': '',
+                'ISIN No.': 'INE002A01018',
+                'Narration': 'Sample transaction',
+                'Held in Demat': 'Yes'
+            }];
+            
+            const wb = XLSX.utils.json_to_sheet(sampleData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, wb, 'Sample');
+            XLSX.writeFile(workbook, 'sample_template.xlsx');
+            showToast('Sample template downloaded', 'success');
+        }
+
+        // Export Functions
+        function exportToExcel() {
+            const userTransactions = transactions.filter(t => t.userId === currentUser.id);
+            const wb = XLSX.utils.json_to_sheet(userTransactions);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, wb, 'Transactions');
+            XLSX.writeFile(workbook, `transactions_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Data exported to Excel', 'success');
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(16);
+            doc.text('Stock Portfolio Report', 20, 20);
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+            doc.text(`User: ${currentUser.name}`, 20, 40);
+            
+            // Add basic stats
+            const totalInv = document.getElementById('totalInvestment').textContent;
+            const currentVal = document.getElementById('currentValue').textContent;
+            const totalPL = document.getElementById('totalPL').textContent;
+            
+            doc.text(`Total Investment: ${totalInv}`, 20, 60);
+            doc.text(`Current Value: ${currentVal}`, 20, 70);
+            doc.text(`Total P&L: ${totalPL}`, 20, 80);
+            
+            doc.save(`portfolio_report_${new Date().toISOString().split('T')[0]}.pdf`);
+            showToast('Report exported to PDF', 'success');
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        // Market Data Functions
+        // Market Data Functions
+function startMarketTicker() {
+    fetchRealTimeData();
+    
+    // Update every 60 seconds
+    setInterval(() => {
+        fetchRealTimeData();
+    }, 10000);
+}
+
+async function fetchRealTimeData() {
+    const symbols = ['^NSEI', 'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'INFY.NS'];
+    const names = ['NIFTY 50', 'RELIANCE', 'TCS', 'HDFC BANK', 'ICICI BANK', 'INFOSYS'];
+    
+    try {
+        // Use bulk endpoint for better performance
+        const symbolsParam = symbols.join(',');
+        const response = await fetch(`http://localhost:5000/api/yahoo-finance/bulk?symbols=${symbolsParam}`);
+        const data = await response.json();
+        
+        const tickerData = [];
+        
+        symbols.forEach((symbol, index) => {
+            if (data[symbol] && data[symbol].chart && data[symbol].chart.result) {
+                const result = data[symbol].chart.result[0];
+                const meta = result.meta;
+                
+                const currentPrice = meta.regularMarketPrice;
+                const changePercent = meta.regularMarketChangePercent * 100;
+                
+                tickerData.push(`${names[index]}: ₹${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+            } else {
+                // Fallback to individual API call
+                fetchIndividualStock(symbol, names[index], tickerData);
+            }
+        });
+        
+        if (tickerData.length > 0) {
+            document.getElementById('marketTicker').textContent = tickerData.join(' • ');
+        } else {
+            document.getElementById('marketTicker').textContent = 'Loading market data...';
+        }
+        
+    } catch (error) {
+        console.error('Error fetching market data:', error);
+        document.getElementById('marketTicker').textContent = 'Market data temporarily unavailable';
+    }
+}
+
+// Fallback function for individual stock data
+async function fetchIndividualStock(symbol, name, tickerArray) {
+    try {
+        const response = await fetch(`http://localhost:5000/api/yahoo-finance/${symbol}`);
+        const data = await response.json();
+        
+        if (data.chart && data.chart.result) {
+            const meta = data.chart.result[0].meta;
+            const currentPrice = meta.regularMarketPrice;
+            const changePercent = meta.regularMarketChangePercent * 100;
+            
+            tickerArray.push(`${name}: ₹${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+        }
+    } catch (error) {
+        console.error(`Error fetching ${symbol}:`, error);
+    }
+}
+
+
+        function refreshData() {
+            showToast('Data refreshed', 'success');
+            loadDashboardData();
+        }
+
+        // Filter and Sort Functions
+        function filterHoldings() {
+            const searchTerm = document.getElementById('holdingsSearch').value.toLowerCase();
+            const table = document.getElementById('holdingsTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function filterTransactions() {
+            const searchTerm = document.getElementById('transactionSearch').value.toLowerCase();
+            const table = document.getElementById('transactionsTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function filterPortfolio() {
+            const searchTerm = document.getElementById('portfolioSearch').value.toLowerCase();
+            const table = document.getElementById('portfolioTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function sortTable(tableId, column) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const aVal = a.cells[column].textContent.trim();
+                const bVal = b.cells[column].textContent.trim();
+                
+                // Try to parse as numbers
+                const aNum = parseFloat(aVal.replace(/[^\d.-]/g, ''));
+                const bNum = parseFloat(bVal.replace(/[^\d.-]/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return aNum - bNum;
+                }
+                
+                return aVal.localeCompare(bVal);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStoredData();
+            initializeApp();
+            setupEventListeners();
+            setupInactivityTimer();
+        });
+    </script>
+</body>
+</html>
